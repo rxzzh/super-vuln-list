@@ -6,6 +6,10 @@ import logging
 import re
 from filter import SelectHostByTargetsStaticFilter, SelectTargetByDedupValidIPStaticFilter, SelectTargetByHostStaticFilter
 from tqdm import tqdm
+from rich import print as pprint
+from rich.logging import RichHandler
+FORMAT = "%(message)s"
+logging.basicConfig(level='INFO',format=FORMAT,handlers=[RichHandler()])
 class Control:
     def __init__(self, hosts_path, targets_table_path, output_path):
         # self.host_reports = RSASReader().read(host_file_path=hosts_path)
@@ -20,7 +24,7 @@ class Control:
         self.output_file_tag = 'dev'
 
     def read_all_reports(self):
-        print('[INFO] reading host files...')
+        logging.info('reading host files...')
         filenames = os.listdir(self.hosts_path)
         report_filenames = list(filter(lambda x: ip_regex.match(x), filenames))
         rr = RSASReader()
@@ -86,7 +90,7 @@ class Control:
         ctb.config_output_path(output_path=concat_path(
             self.output_path, '比对结果{}.docx'.format(self.output_file_tag)))
         messages = []
-        m = ctb.build(hosts_0=self.filtered_hosts, hosts_1=other_control.filtered_hosts)
+        m = ctb.build(hosts_1=self.filtered_hosts, hosts_0=other_control.filtered_hosts)
         messages = '\n'.join(messages)
         
 
@@ -149,6 +153,7 @@ class User:
         # dev
         control.do_filter_dev()
         control.build_all()
+        return True
 
     def compare(self, project_name_0, project_name_1):
         # control_0 use targets.xlsx from control_1. since two targets need to be identical and targets.xlsx in control_1 will be newer version.
@@ -158,7 +163,9 @@ class User:
                           self.get_xlsx_filename(project_name_1) if self.get_xlsx_filename(project_name_1) else None, output_path=self.PATH+project_name_1+'/out/')
         control_0.do_filter_dev()
         control_1.do_filter_dev()
+        control_1.set_output_file_tag(self.tag)
         control_1.build_compare(other_control=control_0)
+        return True
     
     
     def get_xlsx_filename(self, project_name):
@@ -185,7 +192,7 @@ class User:
         # print('greetings!')
         with open('static/banner.txt') as f:
             banner = f.read()
-        print(banner)
+        pprint('[green bold]'+banner)
         while True:
             cmd = input('builder >:')
             if not cmd:
@@ -196,23 +203,18 @@ class User:
             if cmd == 'exit':
                 print('bye!')
                 return
-            if cmd == 'compare':
-                name_0 = input('enter project previous name:')
-                name_1 = input('enter project later name:')
-                self.compare(project_name_0=name_0, project_name_1=name_1)
-                print('[INFO] done. report has been write to {}/out'.format(name_1))
             if cmd == 'help':
                 # print('help ls new go exit')
                 print('help: \tshow this message')
                 print('ls: \tlist projects')
                 print('new: \tcreate a new directory structure with given project name')
                 print('go: \tinitiate basic doc building process with given project name')
-                print('compare: \tinitiate compare sequence between two projects, previous and later.')
+                print('compare:initiate compare sequence between two projects, previous and later.')
                 print('banner: show that awesome banner')
                 print('tag: \tapply a tag to output file')
                 print('exit: \tbye')
             if cmd == 'ls':
-                print(' '.join(self.list_projects()))
+                pprint('[blue]'+' '.join(self.list_projects()))
             if cmd == 'new':
                 name = input('enter project name:')
                 if not name:
@@ -224,8 +226,15 @@ class User:
                 if not name:
                     print('project name can not be empty!')
                 else:
-                    self.go(project_name=name)
-                    print('[INFO] done. report has been write to {}/out'.format(name))
+                    if self.go(project_name=name):
+                        logging.info('done. report has been write to {}/out'.format(name))
+                        pprint('[green bold]TASK SUCCESS!')
+            if cmd == 'compare':
+                name_0 = input('enter project previous name:')
+                name_1 = input('enter project later name:')
+                if self.compare(project_name_0=name_0, project_name_1=name_1):
+                    logging.info('done. report has been write to {}/out'.format(name_1))
+                    pprint('[green bold]TASK SUCCESS!')
             if cmd == 'tag':
                 tag = input('enter tag:')
                 if not re.compile('^(-|[a-z]|[A-Z]|[0-9])*$').match(tag):
@@ -234,7 +243,7 @@ class User:
                     self.tag = tag
                     print('tag has been set as: {}'.format(tag))
             if cmd == 'banner':
-                print(banner)
+                pprint('[green bold]'+banner)
                 print('pretty cool')
 
 if __name__ == '__main__':
