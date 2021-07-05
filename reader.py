@@ -5,7 +5,7 @@ from tqdm import tqdm
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from typing import List
-
+from rich import print as pprint
 
 class RSASReader:
     def __init__(self):
@@ -45,7 +45,6 @@ class TargetExcelReader:
         pass
 
     def read(self, target_excel_path) -> List[TargetModel]:
-        print('[INFO] reading {}...'.format(target_excel_path))
         wb = load_workbook(filename=target_excel_path)
         sheets = list(wb)
         # only work when col size are not greater than 26.
