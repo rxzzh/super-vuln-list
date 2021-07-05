@@ -12,6 +12,7 @@ class RSASReader:
         pass
 
     def read(self, host_file_path) -> HostReportModel:
+        
         with open(host_file_path) as f:
             html_text = f.read()
         root = etree.HTML(html_text)
@@ -44,6 +45,7 @@ class TargetExcelReader:
         pass
 
     def read(self, target_excel_path) -> List[TargetModel]:
+        print('[INFO] reading {}...'.format(target_excel_path))
         wb = load_workbook(filename=target_excel_path)
         sheets = list(wb)
         # only work when col size are not greater than 26.

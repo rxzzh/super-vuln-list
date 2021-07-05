@@ -1,11 +1,11 @@
 from reader import TargetExcelReader, RSASReader
-from builder import TargetTableBuilder, SubtotalTableBuilder, VulnTableBuilder, BriefingBuilder
+from builder import TargetTableBuilder, SubtotalTableBuilder, VulnTableBuilder, BriefingBuilder, CompareTableBuilder
 import os
 from utils import ip_regex, concat_path
 import logging
 import re
 from filter import SelectHostByTargetsStaticFilter, SelectTargetByDedupValidIPStaticFilter, SelectTargetByHostStaticFilter
-
+from tqdm import tqdm
 class Control:
     def __init__(self, hosts_path, targets_table_path, output_path):
         # self.host_reports = RSASReader().read(host_file_path=hosts_path)
@@ -20,11 +20,12 @@ class Control:
         self.output_file_tag = 'dev'
 
     def read_all_reports(self):
+        print('[INFO] reading host files...')
         filenames = os.listdir(self.hosts_path)
         report_filenames = list(filter(lambda x: ip_regex.match(x), filenames))
         rr = RSASReader()
         hosts = []
-        for filename in report_filenames:
+        for filename in tqdm(report_filenames):
             hosts.append(
                 rr.read(host_file_path=concat_path(self.hosts_path, filename)))
         return hosts
@@ -80,6 +81,16 @@ class Control:
         message = '\n'.join(messages)
         bfb.build(message=self.make_briefing()+message)
     
+    def build_compare(self, other_control):
+        ctb = CompareTableBuilder()
+        ctb.config_output_path(output_path=concat_path(
+            self.output_path, '比对结果{}.docx'.format(self.output_file_tag)))
+        messages = []
+        m = ctb.build(hosts_0=self.filtered_hosts, hosts_1=other_control.filtered_hosts)
+        messages = '\n'.join(messages)
+        
+
+
     def make_briefing(self) -> str:
         res = []
         res.append('HOSTS: {}\n'.format(len(self.hosts)))
@@ -138,6 +149,18 @@ class User:
         # dev
         control.do_filter_dev()
         control.build_all()
+
+    def compare(self, project_name_0, project_name_1):
+        # control_0 use targets.xlsx from control_1. since two targets need to be identical and targets.xlsx in control_1 will be newer version.
+        control_0 = Control(hosts_path=self.PATH+project_name_0+'/hosts/', targets_table_path=self.PATH+project_name_1+'/'+'targets_xlsx/' +
+                          self.get_xlsx_filename(project_name_1) if self.get_xlsx_filename(project_name_1) else None, output_path=self.PATH+project_name_0+'/out/')
+        control_1 = Control(hosts_path=self.PATH+project_name_1+'/hosts/', targets_table_path=self.PATH+project_name_1+'/'+'targets_xlsx/' +
+                          self.get_xlsx_filename(project_name_1) if self.get_xlsx_filename(project_name_1) else None, output_path=self.PATH+project_name_1+'/out/')
+        control_0.do_filter_dev()
+        control_1.do_filter_dev()
+        control_1.build_compare(other_control=control_0)
+    
+    
     def get_xlsx_filename(self, project_name):
         filenames = os.listdir(self.PATH+project_name+'/'+'targets_xlsx')
         xlsx_names = list(filter(lambda x: '.xlsx' in x, filenames))
@@ -167,18 +190,24 @@ class User:
             cmd = input('builder >:')
             if not cmd:
                 continue
-            if cmd not in ['help', 'ls', 'new', 'go', 'exit', 'banner', 'tag']:
+            if cmd not in ['help', 'ls', 'new', 'go', 'exit', 'banner', 'tag', 'compare']:
                 print('help ls new go banner tag exit')
                 continue
             if cmd == 'exit':
                 print('bye!')
                 return
+            if cmd == 'compare':
+                name_0 = input('enter project previous name:')
+                name_1 = input('enter project later name:')
+                self.compare(project_name_0=name_0, project_name_1=name_1)
+                print('[INFO] done. report has been write to {}/out'.format(name_1))
             if cmd == 'help':
                 # print('help ls new go exit')
                 print('help: \tshow this message')
                 print('ls: \tlist projects')
                 print('new: \tcreate a new directory structure with given project name')
-                print('go: \tinitiate doc building process with given project name')
+                print('go: \tinitiate basic doc building process with given project name')
+                print('compare: \tinitiate compare sequence between two projects, previous and later.')
                 print('banner: show that awesome banner')
                 print('tag: \tapply a tag to output file')
                 print('exit: \tbye')
@@ -196,6 +225,7 @@ class User:
                     print('project name can not be empty!')
                 else:
                     self.go(project_name=name)
+                    print('[INFO] done. report has been write to {}/out'.format(name))
             if cmd == 'tag':
                 tag = input('enter tag:')
                 if not re.compile('^(-|[a-z]|[A-Z]|[0-9])*$').match(tag):
