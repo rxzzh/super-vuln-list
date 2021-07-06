@@ -63,7 +63,7 @@ class Control:
         return scaned_num/target_num
 
     def build_all(self):
-        ttb = TargetTableBuilder()
+        ttb = TargetTableBuilder() 
         vtb = VulnTableBuilder()
         stb = SubtotalTableBuilder()
         bfb = BriefingBuilder()
@@ -116,7 +116,8 @@ class User:
     def __init__(self):
         self.PATH = './project/'
         self.tag = ''
-
+        if 'project' not in os.listdir():
+            os.mkdir('project')
 
         self.interactive()
         
@@ -137,7 +138,9 @@ class User:
         return True
 
     def list_projects(self):
-        return os.listdir(self.PATH)
+        dirs = os.listdir(self.PATH)
+        dirs.sort()
+        return dirs
 
     def go(self, project_name):
         if not self.environment_check(project_name):
@@ -192,27 +195,29 @@ class User:
         # print('greetings!')
         with open('static/banner.txt') as f:
             banner = f.read()
-        pprint('[green bold]'+banner)
+        pprint(banner)
         while True:
-            cmd = input('builder >:')
+            cmd = input('builder >:').strip()
             if not cmd:
                 continue
-            if cmd not in ['help', 'ls', 'new', 'go', 'exit', 'banner', 'tag', 'compare']:
-                print('help ls new go banner tag exit')
+            cmds = ['help', 'ls', 'new', 'go', 'exit', 'banner', 'tag', 'compare']
+            if cmd not in cmds:
+                pprint('[green]'+' '.join(cmds))
                 continue
             if cmd == 'exit':
                 print('bye!')
                 return
             if cmd == 'help':
                 # print('help ls new go exit')
-                print('help: \tshow this message')
-                print('ls: \tlist projects')
-                print('new: \tcreate a new directory structure with given project name')
-                print('go: \tinitiate basic doc building process with given project name')
-                print('compare:initiate compare sequence between two projects, previous and later.')
-                print('banner: show that awesome banner')
-                print('tag: \tapply a tag to output file')
-                print('exit: \tbye')
+                sprint = lambda x:pprint('[green]'+x.split(':')[0]+'[white]:'+x.split(':')[1])
+                sprint('help: \tshow this message')
+                sprint('ls: \tlist projects')
+                sprint('new: \tcreate a new directory structure with given project name')
+                sprint('go: \tinitiate basic doc building process with given project name')
+                sprint('compare:initiate compare sequence between two projects, previous and later.')
+                sprint('banner: show that awesome banner')
+                sprint('tag: \tapply a tag to output file')
+                sprint('exit: \tbye')
             if cmd == 'ls':
                 pprint('[blue]'+' '.join(self.list_projects()))
             if cmd == 'new':
@@ -243,7 +248,7 @@ class User:
                     self.tag = tag
                     print('tag has been set as: {}'.format(tag))
             if cmd == 'banner':
-                pprint('[green bold]'+banner)
+                pprint(banner)
                 print('pretty cool')
 
 if __name__ == '__main__':
