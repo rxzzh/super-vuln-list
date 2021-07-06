@@ -159,6 +159,14 @@ class User:
         return True
 
     def compare(self, project_name_0, project_name_1):
+        if not self.environment_check(project_name_0):
+            logging.critical(
+                'An critical error has occured, please read error messages and try again.')
+            return
+        if not self.environment_check(project_name_1):
+            logging.critical(
+                'An critical error has occured, please read error messages and try again.')
+            return
         # control_0 use targets.xlsx from control_1. since two targets need to be identical and targets.xlsx in control_1 will be newer version.
         control_0 = Control(hosts_path=self.PATH+project_name_0+'/hosts/', targets_table_path=self.PATH+project_name_1+'/'+'targets_xlsx/' +
                           self.get_xlsx_filename(project_name_1) if self.get_xlsx_filename(project_name_1) else None, output_path=self.PATH+project_name_0+'/out/')
@@ -180,7 +188,7 @@ class User:
     def environment_check(self, project_name):
         if not project_name in os.listdir(self.PATH):
             logging.critical(
-                'Project {} not found. Please check the spell or call "new" command to create one.'.format(project_name))
+                'Project "{}" not found. Please check the spell or call "new" command to create one.'.format(project_name))
             return False
         if not os.listdir(self.PATH+project_name+'/hosts'):
             logging.critical(
