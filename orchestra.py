@@ -230,6 +230,9 @@ class User:
                 pprint('[blue]'+' '.join(self.list_projects()))
             if cmd == 'new':
                 name = input('enter project name:')
+                if '/' in name:
+                    logging.critical('contains special characters')
+                    return
                 if not name:
                     print('project name can not be empty!')
                 else:
