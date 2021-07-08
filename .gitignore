@@ -3,3 +3,4 @@ project/**
 .pytest_cache/
 venv/
 dev.py
+*.sqlite
