@@ -222,8 +222,3 @@ class DocHandler:
         for i in tqdm(range(len(records))):
             gadget_fill_cell_super(cells=cells[i*COLUMNS:(i+1)*COLUMNS], fields=records[i])
         doc.save(output_path)
-
-# if True:
-#     from reader import RSASReader
-#     rsasr = RSASReader()
-#     rsasr.read(host_file_path=)
