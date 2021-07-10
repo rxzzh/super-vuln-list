@@ -6,10 +6,20 @@ from openpyxl import Workbook
 from openpyxl import load_workbook
 from typing import List
 from rich import print as pprint
+import os
+from utils import ip_regex, concat_path
 
 class RSASReader:
     def __init__(self):
         pass
+
+    def read_all(self, host_file_path):
+        files = os.listdir(host_file_path)
+        files = list(filter(ip_regex.match, files))
+        res = []
+        for _ in files:
+            res.append(self.read(host_file_path=concat_path(host_file_path, _)))
+        return res
 
     def read(self, host_file_path) -> HostReportModel:
         

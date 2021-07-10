@@ -47,3 +47,12 @@ def singleton(class_):
             instances[class_] = class_(*args, **kwargs)
         return instances[class_]
     return getinstance
+
+def dedup(records, func):
+    res = []
+    cache = []
+    for record in records:
+        if func(record) not in cache:
+            res.append(record)
+            cache.append(func(record))
+    return res
