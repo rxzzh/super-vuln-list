@@ -1,7 +1,8 @@
 import sqlite3
 import logging
 from utils import singleton
-
+from rich import print
+from functools import cached_property
 
 @singleton
 class DB:
@@ -17,7 +18,7 @@ class DB:
     #     return res
 
     def execute(self, sql: str, values: tuple):
-        print(sql, values)
+        # print('[blue][SQL]{}\n[green][VALUES]{}\n'.format(sql, values))
         c = self.conn.cursor()
         res = c.execute(sql, values)
         self.conn.commit()
@@ -138,7 +139,8 @@ class SchemaManager:
             'drop table host_vuln;',
             'drop table vuln;',
             'drop table host;',
-            'drop table project;'
+            'drop table project;',
+            'drop table target'
         ]
         for sql in sqls:
             self.db.execute(sql, ())
@@ -152,10 +154,14 @@ class MiddleLayer:
         sql = 'insert into project values (null, ?);'
         self.db.execute(sql, (project_name,))
 
+    def insert_target(self, project_name, name, ip, purpose=''):
+        project_id = self.query_project_id(project_name=project_name)
+        sql = 'insert into target (project_id, name, ip, purpose) values (?, ?, ?, ?);'
+        self.db.execute(sql, (project_id, name, ip, purpose))
+
     def insert_host(self, ip, project_name):
         project_id = self.query_project_id(project_name=project_name)
         sql = 'insert into host values (null, ?, ?, 0);'
-        print('s')
         self.db.execute(sql, (project_id, ip))
 
     def insert_vuln(self, name, severity):
@@ -196,12 +202,12 @@ class MiddleLayer:
 
     def query_hosts(self, project_name):
         project_id = self.query_project_id(project_name=project_name)
-        sql = 'select name, ip from host where project_id=?'
+        sql = 'select ip from host where project_id=?'
         return self.db.execute(sql, (project_id,)).fetchall()
 
     def query_hosts_scan(self, project_name):
         project_id = self.query_project_id(project_name=project_name)
-        sql = 'select name, ip from host where project_id=? and scan=1'
+        sql = 'select ip from host where project_id=? and scan=1'
         return self.db.execute(sql,(project_id,)).fetchall()
 
     def query_vulns(self, project_name):
@@ -219,14 +225,23 @@ class MiddleLayer:
         sql = '''select name, severity from vuln'''
         return self.db.execute(sql,()).fetchall()
 
+    # TODO REWRITE
     def query_artifact_TARGETS(self, project_name):
         project_id = self.query_project_id(project_name=project_name)
-        sql = '''select host.name, host.ip 
-                    from host 
-                    where host.project_id=?
-                    order by host.ip
+        sql = '''select target.name, target.ip from target where project_id=?
               '''
         return self.db.execute(sql,(project_id,)).fetchall()
+    
+    def query_artifact_SCAN_TARGETS(self, project_name):
+        project_id = self.query_project_id(project_name=project_name)
+        sql = '''select target.name, target.ip
+                 from (select * from target where project_id=?) as target
+                 left join (select * from host where project_id=?) as host
+                 on target.ip=host.ip
+                 where host.scan=1
+              '''
+        return self.db.execute(sql, (project_id,project_id))
+
 
     def query_artifact_VULN_TYPE(self, project_name):
         project_id = self.query_project_id(project_name=project_name)
@@ -269,11 +284,11 @@ class MiddleLayer:
                             where host.id=?
                         )
               '''
-        sql2 = 'select name, ip from host where id=?;'
+        sql2 = 'select ip from host where id=?;'
         res = []
         for id_ in host_ids:
-            res.append(self.db.execute(sql2,(id_,))).fetchone(
-            ) + self.db.execute(sql,(id_,id_,id_,id_)).fetchone()
+            res.append(self.db.execute(sql2, (id_,)).fetchone(
+            ) + self.db.execute(sql,(id_,id_,id_,id_)).fetchone())
         return res
 
     # def query_artifact_COMPARE(self, project_name_a, project_name_b):
