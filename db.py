@@ -100,7 +100,6 @@ class SchemaManager:
             '''create table host (
                 id integer primary key autoincrement,
                 project_id integer,
-                name text not null,
                 ip char(50) not null,
                 scan boolean default 0,
                 foreign key (project_id) references project(id)
@@ -153,11 +152,11 @@ class MiddleLayer:
         sql = 'insert into project values (null, ?);'
         self.db.execute(sql, (project_name,))
 
-    def insert_host(self, name, ip, project_name):
+    def insert_host(self, ip, project_name):
         project_id = self.query_project_id(project_name=project_name)
-        sql = 'insert into host values (null, ?, ?, ?, 0);'
+        sql = 'insert into host values (null, ?, ?, 0);'
         print('s')
-        self.db.execute(sql, (project_id, name, ip))
+        self.db.execute(sql, (project_id, ip))
 
     def insert_vuln(self, name, severity):
         sql = 'insert into vuln values (null, ?, ?);'
