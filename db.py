@@ -181,6 +181,10 @@ class MiddleLayer:
         sql = 'update host set scan=1 where project_id=? and ip=?'
         # print('ueah')
         self.db.execute(sql, (project_id, host_ip))
+    
+    def query_projects(self):
+        sql = 'select name from project;'
+        return self.db.execute(sql, ()).fetchall()
 
     def query_project_id(self, project_name):
         sql = 'select id from project where name = ?;'

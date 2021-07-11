@@ -1,177 +1,226 @@
+from rich import print as pprint
 from reader import RSASReader, TargetExcelReader
 from model import HostReportModel, VulnModel, TargetModel
-from db import MiddleLayer
+from db import MiddleLayer, SchemaManager
 import os
 from utils import concat_path, dedup
 from docx import Document
 from utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
 from tqdm import tqdm
-class Main:
+from builder import VulnTableBuilder, SubtotalTableBuilder, TargetTableBuilder, AllTargetTableBuilder, CompareTableBuilder
+from tqdm import tqdm
+import logging
+from rich.logging import RichHandler
+FORMAT = "%(message)s"
+logging.basicConfig(level='INFO', format=FORMAT, handlers=[RichHandler()])
+
+
+class MainControl:
     def __init__(self):
-        pass
+        self.ml = MiddleLayer()
 
-    def load_project_into_db(self, project_name):
-        xlsx_filename = os.listdir('project/{}/targets_xlsx/'.format(project_name))[0]
-        targets = TargetExcelReader().read(target_excel_path='project/{}/targets_xlsx/{}'.format(project_name, xlsx_filename))
+    def db_dump(self, project_name):
+        xlsx_filename = os.listdir(
+            'project/{}/targets_xlsx/'.format(project_name))[0]
+        targets = TargetExcelReader().read(
+            target_excel_path='project/{}/targets_xlsx/{}'.format(project_name, xlsx_filename))
         hosts = RSASReader().read_all(host_file_path='project/{}/hosts/'.format(project_name))
-
         targets = dedup(records=targets, func=lambda x: x.ip)
-
         dbl = DBLoader(project_name=project_name)
         dbl.load_project()
         dbl.load_target(targets=targets)
         dbl.load_host(hosts=hosts)
         dbl.load_vuln_from_host(hosts=hosts)
         dbl.load_host_vuln(hosts=hosts)
-    
-class Builder:
+
+    def db_purge(self):
+        SchemaManager().reset_database()
+
+    def db_projects(self):
+        return [_[0] for _ in self.ml.query_projects()]
+
+    def analysis_basic(self, project_name):
+        VulnTableBuilder().build(project_name=project_name)
+        SubtotalTableBuilder().build(project_name=project_name)
+        TargetTableBuilder().build(project_name=project_name)
+        AllTargetTableBuilder().build(project_name=project_name)
+
+    def analysis_compare(self, project_name_a, project_name_b):
+        CompareTableBuilder().build(project_name_a=project_name_a,
+                                    project_name_b=project_name_b)
+
+
+class User:
     def __init__(self):
-        self.ml = MiddleLayer()
-        self.dh = DocHandler()
+        self.PATH = './project/'
+        self.tag = ''
+        if 'project' not in os.listdir():
+            os.mkdir('project')
+        self.mc = MainControl()
+        self.interactive()
 
-class TableBuilder(Builder):
-    def build(self, project_name):
-        pass
+    def generate_project(self, project_name):
+        project_dir_names = os.listdir(self.PATH)
+        if project_name in project_dir_names:
+            logging.warning(
+                'project {} already exists! nothing to do.'.format(project_name))
+            return False
+        else:
+            project_path = self.PATH+project_name+'/'
+            os.mkdir(project_path)
+            os.mkdir(project_path+'hosts')
+            os.mkdir(project_path+'out')
+            os.mkdir(project_path+'targets_xlsx')
+        return True
 
-    def query(self, project_name):
-        pass
+    def list_projects(self):
+        dirs = os.listdir(self.PATH)
+        dirs.sort()
+        return dirs
 
-    def prefix_id(self, records):
-        i = 1
-        new_records = []
-        for _ in records:
-            new_records.append((i,)+_)
-            i+=1
-        return new_records
-    
-    def count(self, records, key):
-        return len(list(filter(key, records)))
+    def db_projects(self):
+        return self.mc.db_projects()
 
-class SubtotalTableBuilder(TableBuilder):
-    def build(self, project_name):
-        records = self.query(project_name=project_name)
-        records = [(_[0], _[1], _[2], _[3], _[4]) for _ in records]
-        # def select()
-        records.append(('漏洞数量合计',sum([_[1] for _ in records]),sum([_[2] for _ in records]),sum([_[3] for _ in records]),sum([_[4] for _ in records])))
-        self.dh.build_doc_tablelike(records=self.prefix_id(records), template_path='static/template-subtotal.docx', filename='数量统计.docx', project_name=project_name)
-    
-    def query(self, project_name):
-        return self.ml.query_artifact_VULN_COUNT(project_name=project_name)
+    def db_dump(self, project_name):
+        if project_name in self.db_projects():
+            logging.error('{} already exists.'.format(project_name))
+            return False
+        logging.info('dumping data into database')
+        if not self.environment_check(project_name=project_name):
+            return
+        self.mc.db_dump(project_name=project_name)
+        return True
 
-class TargetTableBuilder(TableBuilder):
-    def build(self, project_name):
-        records = self.query(project_name)
-        self.dh.build_doc_tablelike(records=self.prefix_id(records), template_path='static/template-scan-target.docx', filename='已扫资产表格.docx', project_name=project_name)
+    def db_purge(self):
+        print('boop')
+        # self.mc.db_purge()
+        return True
 
-    def query(self, project_name):
-        return self.ml.query_artifact_SCAN_TARGETS(project_name=project_name)
+    def go(self, project_name):
+        if project_name not in self.db_projects():
+            self.db_dump(project_name=project_name)
+        if project_name in self.db_projects():
+            logging.info('building tables')
+            self.mc.analysis_basic(project_name=project_name)
+            return True
 
-class AllTargetTableBuilder(TableBuilder):
-    def build(self, project_name):
-        records = self.query(project_name)
-        self.dh.build_doc_tablelike(records=self.prefix_id(records), template_path='static/template-scan-target.docx', filename='所有资产表格.docx', project_name=project_name)
+    def compare(self, project_name_0, project_name_1):
+        if project_name_0 not in self.db_projects() or project_name_1 not in self.db_projects():
+            logging.error('"{}" or "{}" not in database yet. please call "dump" first'.format(
+                project_name_0, project_name_1))
+            return
+        # control_0 use targets.xlsx from control_1. since two targets need to be identical and targets.xlsx in control_1 will be newer version.
+        self.mc.analysis_compare(
+            project_name_a=project_name_0, project_name_b=project_name_1)
+        return True
 
-    def query(self, project_name):
-        return self.ml.query_artifact_TARGETS(project_name=project_name)
+    def get_xlsx_filename(self, project_name):
+        filenames = os.listdir(self.PATH+project_name+'/'+'targets_xlsx')
+        xlsx_names = list(filter(lambda x: '.xlsx' in x, filenames))
+        xlsx_names = list(filter(lambda x: '~$' not in x, filenames))
+        return xlsx_names[0] if xlsx_names else None
 
-class VulnTableBuilder(TableBuilder):
-    def build(self, project_name):
-        records = self.query(project_name=project_name)
-        names = {}
-        for record in records:
-            if record[0] not in names:
-                names[record[0]] = (record[0], record[1], [])
-            # print(record)
-            names[record[0]][2].append(record[2])
-        records = [(_[0],_[1],','.join(_[2])) for _ in names.values()]
-        hanzi_mapper = {'high':'高','middle':'中','low':'低'}
-        severity_mapper = {'high':0,'middle':1,'low':2}
-        records.sort(key=lambda x: severity_mapper[x[1]])
-        records = [(_[0],hanzi_mapper[_[1]],_[2]) for _ in records]
-        high_sum = len(list(filter(lambda x: x[1]=='高', records)))
-        mid_sum = len(list(filter(lambda x: x[1]=='中', records)))
-        low_sum = len(list(filter(lambda x: x[1]=='低', records)))
-        records.append(('高：{}\t中：{}\t低：{}'.format(high_sum, mid_sum, low_sum),'',''))
-        self.dh.build_doc_tablelike(records=self.prefix_id(records), template_path='static/template-vulnlist.docx', filename='漏洞类型.docx', project_name=project_name)
+    def environment_check(self, project_name):
+        if not project_name in os.listdir(self.PATH):
+            logging.error(
+                'Project "{}" not found. Please check the spell or call "new" command to create one.'.format(project_name))
+            return False
+        if not os.listdir(self.PATH+project_name+'/hosts'):
+            logging.error(
+                'No file were found in {}/hosts, please copy the hosts directory in the vuln scan reports to cover this path.'.format(project_name))
+            return False
+        if not any(['.xlsx' in _ for _ in os.listdir(self.PATH+project_name+'/'+'targets_xlsx/')]):
+            logging.warning(
+                'No targets file in {}/, program will output all .html files.'.format(project_name))
+        return True
 
-    def query(self, project_name):
-        return self.ml.query_artifact_VULN_TYPE(project_name=project_name)
+    def interactive(self):
+        # print('greetings!')
+        with open('static/banner.txt') as f:
+            banner = f.read()
+        pprint(banner)
+        while True:
+            cmd = input('builder >:').strip()
+            if not cmd:
+                continue
+            cmds = ['help', 'ls', 'new', 'go',
+                    'exit', 'banner', 'tag', 'compare', 'lsdb', 'dump', 'purge']
+            if cmd not in cmds:
+                pprint('[green]'+' '.join(cmds))
+                continue
+            if cmd == 'exit':
+                print('bye!')
+                return
+            if cmd == 'help':
+                # print('help ls new go exit')
+                def sprint(x): return pprint(
+                    '[green]'+x.split(':')[0]+'[white]:'+x.split(':')[1])
+                sprint('help: \tshow this message')
+                sprint('ls: \tlist projects')
+                sprint(
+                    'new: \tcreate a new directory structure with given project name')
+                sprint(
+                    'go: \tinitiate basic doc building process with given project name')
 
-class CompareTableBuilder(TableBuilder):
+                sprint(
+                    'compare:initiate compare sequence between two projects, previous and later.')
+                sprint('dump: \tread raw data from html and xlsx from particular project directory and dump them into backend database')
+                sprint('lsdb: \tshow dumped projects')     
+                sprint('purge: \tdelete all project in backend database')   
+                sprint('banner: show that awesome banner')
+                sprint('tag: \tapply a tag to output file')
+                sprint('exit: \tbye')
+            if cmd == 'ls':
+                pprint('[blue]'+' '.join(self.list_projects()))
+            if cmd == 'new':
+                name = input('enter project name:')
+                if '/' in name:
+                    logging.critical('contains special characters')
+                    return
+                if not name:
+                    print('project name can not be empty!')
+                else:
+                    self.generate_project(project_name=name)
+            if cmd == 'lsdb':
+                pprint('[blue]'+' '.join(self.db_projects()))
+            if cmd == 'dump':
+                name = input('enter project name:')
+                if self.db_dump(project_name=name):
+                    pprint('[green bold]TASK SUCCESS!')
+            if cmd == 'go':
+                name = input('enter project name:')
+                if not name:
+                    print('project name can not be empty!')
+                else:
+                    if self.go(project_name=name):
+                        logging.info(
+                            'done. report has been write to {}/out'.format(name))
+                        pprint('[green bold]TASK SUCCESS!')
+            if cmd == 'compare':
+                name_0 = input('enter project previous name:')
+                name_1 = input('enter project later name:')
+                if self.compare(project_name_0=name_0, project_name_1=name_1):
+                    logging.info(
+                        'done. report has been write to {}/out'.format(name_1))
+                    pprint('[green bold]TASK SUCCESS!')
+            if cmd == 'tag':
+                tag = input('enter tag:')
+                if not re.compile('^(-|[a-z]|[A-Z]|[0-9])*$').match(tag):
+                    print('tag should be (-|[a-z]|[A-Z]|[0-9])*')
+                else:
+                    self.tag = tag
+                    print('tag has been set as: {}'.format(tag))
+            if cmd == 'purge':
+                pprint('[red bold]this action will delete all data in database, are you sure? [y/n]',end='')
+                sure = input()
+                if sure in ['y','Y']:
+                    self.db_purge()
+                    pprint('[green bold]DONE.')
+            if cmd == 'banner':
+                pprint(banner)
+                print('pretty cool')
 
-    def build(self, project_name_a, project_name_b):
-        def get_records(project_name):
-            records = self.query(project_name=project_name)
-            names = {}
-            for record in records:
-                if record[0] not in names:
-                    names[record[0]] = (record[0], record[1], [])
-                # print(record)
-                names[record[0]][2].append(record[2])
-            records = [(_[0],_[1],','.join(_[2]),_[2]) for _ in names.values()]
-            hanzi_mapper = {'high':'高','middle':'中','low':'低'}
-            severity_mapper = {'high':0,'middle':1,'low':2}
-            records.sort(key=lambda x: severity_mapper[x[1]])
-            # records = [(_[0],hanzi_mapper[_[1]],_[2]) for _ in records]
-            return records
-        records_a = get_records(project_name=project_name_a)
-        records_b = get_records(project_name=project_name_b)
-        names = [_[0] for _ in records_a+records_b]
-        records_a = dict(zip([_[0] for _ in records_a], records_a))
-        records_b = dict(zip([_[0] for _ in records_b], records_b))
-        names = list(set(names))
-        res = []
-        for name in names:
-            severity = records_a[name][1] if name in records_a else records_b[name][1]
-            ip_str_a = records_a[name][2] if name in records_a else '--'
-            ip_str_b = records_b[name][2] if name in records_b else '--'
-            ip_a = records_a[name][3] if name in records_a else []
-            ip_b = records_b[name][3] if name in records_b else []
-            ip_a = set(ip_a)
-            ip_b = set(ip_b)
-            def judge(old:set, new:set):
-                if len(new)==0:
-                    return '已整改'
-                if new.issubset(old) and len(new)>len(old):
-                    return '部分整改'
-                return '未整改'
-            judge_result = judge(old=ip_a, new=ip_b)
-            hanzi_mapper = {'high':'高','middle':'中','low':'低'}
-            new_res = (name, hanzi_mapper[severity], ip_str_a, ip_str_b, judge_result)
-            res.append(new_res)
-        
-        severity_mapper = {'高':0,'中':1,'低':2}
-        res = sorted(res, key=lambda x: (severity_mapper[x[1]],x[0]))
-        self.dh.build_doc_tablelike(records=self.prefix_id(res), template_path='static/template-compare.docx', filename='前后对比-{}-{}.docx'.format(project_name_a, project_name_b), project_name=project_name_b)
 
-    def query(self, project_name):
-        return self.ml.query_artifact_VULN_TYPE(project_name=project_name)
-
-
-class DocHandler:
-    def __init__(self):
-        pass
-    
-    def build_plain_txt(self, message, output_path='dev.txt'):
-        with open(output_path,'w+') as f:
-            f.write(message)
-
-    def build_doc_tablelike(self, records, template_path, filename, project_name, path_pattern='project/{}/out/'):
-        doc = Document(template_path)
-        table = doc.tables[0]
-        ROWS = len(records)
-        HEAD_ROWS = len(table.rows)
-        for i in range(ROWS):
-            new_row = table.add_row()
-        gadget_set_row_height(rows=table.rows[HEAD_ROWS:])
-        COLUMNS = len(new_row.cells)
-        cells = table._cells
-        cells = cells[HEAD_ROWS*COLUMNS:]
-        # print(cells)
-        for i in tqdm(range(len(records))):
-            gadget_fill_cell_super(cells=cells[i*COLUMNS:(i+1)*COLUMNS], fields=records[i])
-        doc.save(path_pattern.format(project_name)+filename)
-from tqdm import tqdm
 class DBLoader:
     def __init__(self, project_name):
         self.ml = MiddleLayer()
@@ -179,15 +228,16 @@ class DBLoader:
 
     def load_project(self):
         self.ml.insert_project(project_name=self.project_name)
-    
+
     def load_target(self, targets):
         for record in tqdm(targets):
-            self.ml.insert_target(project_name=self.project_name,name=record.name,ip=record.ip)
-    
+            self.ml.insert_target(
+                project_name=self.project_name, name=record.name, ip=record.ip)
+
     def load_host(self, hosts):
         for record in tqdm(hosts):
             self.ml.insert_host(ip=record.ip, project_name=self.project_name)
-    
+
     def load_vuln_from_host(self, hosts):
         vulns = []
         for host in hosts:
@@ -206,49 +256,17 @@ class DBLoader:
         for record in tqdm(vulns):
             if record.name not in names:
                 self.ml.insert_vuln(name=record.name, severity=record.severity)
-    
+
     def load_host_vuln(self, hosts):
         for record in tqdm(hosts):
-            self.ml.update_host_scan_state(project_name=self.project_name, host_ip=record.ip)
+            self.ml.update_host_scan_state(
+                project_name=self.project_name, host_ip=record.ip)
             host_ip = record.ip
             vulns = record.vulns
             for vuln in vulns:
-                self.ml.insert_host_vuln(project_name=self.project_name, host_ip=host_ip, vuln_name=vuln.name)
-
-from db import SchemaManager
-
-
-# dh = DocHandler()
-# from db import MiddleLayer
-# ml = MiddleLayer()
-# dh.build_doc_tablelike(records=ml.query_artifact_VULN_COUNT(project_name='dev'), template_path='static/template-subtotal.docx', filename='dev.docx', project_name='dev')
-# ml.query_hosts_scan(project_name='dev')
+                self.ml.insert_host_vuln(
+                    project_name=self.project_name, host_ip=host_ip, vuln_name=vuln.name)
 
 
-
-
-
-
-# m.load_project_into_db(project_name='dev0')
-
-project_name = 'up3'
-# sm = SchemaManager()
-# sm.reset_database()
-m = Main()
-import profile
-# profile.run('m.load_project_into_db(project_name=project_name)')
-
-VulnTableBuilder().build(project_name=project_name)
-SubtotalTableBuilder().build(project_name=project_name)
-TargetTableBuilder().build(project_name=project_name)
-AllTargetTableBuilder().build(project_name=project_name)
-CompareTableBuilder().build(project_name_a='up0', project_name_b='up3')
-# stb = SubtotalTableBuilder()
-# stb.build(project_name='dev')
-# vtb = VulnTableBuilder()
-# vtb.build(project_name='dev')
-
-# res = MiddleLayer().query_artifact_SCAN_TARGETS(project_name='dev').fetchall()
-# from rich import print
-# print(res)
-# print(len(res))
+if __name__ == '__main__':
+    User()
