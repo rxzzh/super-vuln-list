@@ -17,6 +17,7 @@ logging.basicConfig(level='INFO', format=FORMAT, handlers=[RichHandler()])
 
 class MainControl:
     def __init__(self):
+        self.sm = SchemaManager()
         self.ml = MiddleLayer()
 
     def db_dump(self, project_name):
@@ -34,7 +35,7 @@ class MainControl:
         dbl.load_host_vuln(hosts=hosts)
 
     def db_purge(self):
-        SchemaManager().reset_database()
+        self.sm.reset_database()
 
     def db_projects(self):
         return [_[0] for _ in self.ml.query_projects()]
