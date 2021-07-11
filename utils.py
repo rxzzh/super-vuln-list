@@ -39,3 +39,20 @@ def gadget_set_row_height(rows):
     for row in rows:
         row.height = Cm(0.8)
         row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
+
+def singleton(class_):
+    instances = {}
+    def getinstance(*args, **kwargs):
+        if class_ not in instances:
+            instances[class_] = class_(*args, **kwargs)
+        return instances[class_]
+    return getinstance
+
+def dedup(records, func):
+    res = []
+    cache = []
+    for record in records:
+        if func(record) not in cache:
+            res.append(record)
+            cache.append(func(record))
+    return res
