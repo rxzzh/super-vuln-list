@@ -7,7 +7,7 @@ from utils import concat_path, dedup
 from docx import Document
 from utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
 from tqdm import tqdm
-from builder import VulnTableBuilder, SubtotalTableBuilder, TargetTableBuilder, AllTargetTableBuilder, CompareTableBuilder
+from builder import VulnTableBuilder, SubtotalTableBuilder, TargetTableBuilder, AllTargetTableBuilder, CompareTableBuilder, BriefingTextBuilder
 from tqdm import tqdm
 import logging
 from rich.logging import RichHandler
@@ -45,6 +45,8 @@ class MainControl:
         SubtotalTableBuilder().build(project_name=project_name)
         TargetTableBuilder().build(project_name=project_name)
         AllTargetTableBuilder().build(project_name=project_name)
+        BriefingTextBuilder().build(project_name=project_name)
+
 
     def analysis_compare(self, project_name_a, project_name_b):
         CompareTableBuilder().build(project_name_a=project_name_a,

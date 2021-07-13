@@ -11,12 +11,6 @@ class DB:
         self.conn = sqlite3.connect(db_filename)
         logging.info('s')
 
-    # def execute(self, sql):
-    #     c = self.conn.cursor()
-    #     res = c.execute(sql)
-    #     self.conn.commit()
-    #     return res
-
     def execute(self, sql: str, values: tuple):
         # print('[blue][SQL]{}\n[green][VALUES]{}\n'.format(sql, values))
         c = self.conn.cursor()
@@ -252,7 +246,7 @@ class MiddleLayer:
                  on target.ip=host.ip
                  where host.scan=1
               '''
-        return self.db.execute(sql, (project_id,project_id))
+        return self.db.execute(sql, (project_id,project_id)).fetchall()
 
 
     def query_artifact_VULN_TYPE(self, project_name):

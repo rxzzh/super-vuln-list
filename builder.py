@@ -7,10 +7,34 @@ from docx import Document
 from utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
 from tqdm import tqdm
 
+
 class Builder:
     def __init__(self):
         self.ml = MiddleLayer()
         self.dh = DocHandler()
+
+class TextBuilder(Builder):
+    def build(self, project_name):
+        pass
+
+class BriefingTextBuilder(TextBuilder):
+    def build(self, project_name):
+        scan_count = len(self.ml.query_hosts_scan(project_name=project_name))
+        targets_count = len(self.ml.query_artifact_TARGETS(project_name=project_name))
+        scan_targets_count = len(self.ml.query_artifact_SCAN_TARGETS(project_name=project_name))
+        scan_rate = scan_targets_count/targets_count
+        vulns = self.ml.query_vulns(project_name=project_name)
+        severities = [_[1] for _ in vulns]
+        keys = ['high', 'middle', 'low']
+        counts = [str(len(list(filter(lambda x: x==key, severities)))) for key in keys]
+        msg = ''
+        msg += 'RSAS OUTPUT HOSTS COUNT: {}\n'.format(str(scan_count))
+        msg += 'TARGETS COUNT: {}\n'.format(str(targets_count))
+        msg += 'SCANED TARGETS COUNT: {}\n'.format(str(scan_targets_count))
+        msg += 'SCAN RATE: {}\n'.format(str(scan_rate))
+        msg += 'VULN: \n  HIGH:{} MID:{} LOW:{}\n'.format(counts[0], counts[1], counts[2])
+        self.dh.build_plain_txt(message=msg, filename='简报.txt', project_name=project_name)
+
 
 class TableBuilder(Builder):
     def build(self, project_name):
@@ -134,8 +158,8 @@ class DocHandler:
     def __init__(self):
         pass
     
-    def build_plain_txt(self, message, output_path='dev.txt'):
-        with open(output_path,'w+') as f:
+    def build_plain_txt(self, message, filename, project_name, path_pattern='project/{}/out/'):
+        with open(path_pattern.format(project_name)+filename,'w+') as f:
             f.write(message)
 
     def build_doc_tablelike(self, records, template_path, filename, project_name, path_pattern='project/{}/out/'):
