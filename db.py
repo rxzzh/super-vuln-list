@@ -27,9 +27,10 @@ class DB:
 
 class SchemaManager:
     def __init__(self):
-        self.db = DB()
         if 'db.sqlite' not in os.listdir():
-            SchemaManager().init_tables()
+            self.db = DB()
+            self.init_tables()
+        self.db = DB()
 
     def reset_database(self):
         self.drop_all_tables()
