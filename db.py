@@ -3,7 +3,7 @@ import logging
 from utils import singleton
 from rich import print
 from functools import cached_property
-
+import os
 @singleton
 class DB:
     def __init__(self):
