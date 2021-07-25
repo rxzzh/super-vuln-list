@@ -18,9 +18,9 @@ def get_project_name():
   mock_res = {"projects":[{"name":"dev0","status":"pending"},{"name":"dev1","status":"standby"},{"name":"dev2","status":"error"},{"name":"dev3","status":"waiting"}]}
   return mock_res
 
-@app.get('/api/project/{name}')
+@app.get('/api/project/{name}/status')
 def get_project_by_name(name):
-  mock_res = {"project_name":"dev0","status":"standby"}
+  mock_res = {"project_name":name,"status":"standby"}
   return mock_res
 
 @app.post('api/project/{name}/import/xlsx')
@@ -33,9 +33,9 @@ def post_project_import_zip(name):
   mock_res = {"status":"success"}
   return mock_res
 
-@app.get('api/project/{name}/xlsx')
+@app.get('api/project/xlsx/{name}')
 def get_project_xlsx(name):
-  mock_res = {"status":"success"}
+  mock_res = {"name":name,"xlsx":[{"name":"mock0","ip":"10.1.1.1"},{"name":"mock1","ip":"10.1.1.2"},{"name":"mock2","ip":"10.1.1.3"},{"name":"mock3","ip":"10.1.1.4"},{"name":"mock4","ip":"10.1.1.5"}]}
   return mock_res
 
 @app.get('api/project/{name}/html')
