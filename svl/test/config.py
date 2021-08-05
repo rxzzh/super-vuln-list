@@ -1,0 +1,1 @@
+DEV_PROJECT_BASE_PATH = 'svl/test/dev-project/'

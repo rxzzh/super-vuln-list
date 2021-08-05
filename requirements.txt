@@ -1,6 +1,6 @@
 pytest==6.2.4
 pydantic>=1.7.2
-docx==0.2.4
+python-docx==0.8.10
 lxml==4.6.1
 tqdm==4.51.0
 openpyxl==3.0.7
