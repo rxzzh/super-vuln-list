@@ -1,13 +1,12 @@
 from rich import print as pprint
-from reader import RSASReader, TargetExcelReader
-from model import HostReportModel, VulnModel, TargetModel
-from db import MiddleLayer, SchemaManager
+from .reader import RSASReader, TargetExcelReader
+from .model import HostReportModel, VulnModel, TargetModel
+from .db import MiddleLayer, SchemaManager
 import os
-from utils import concat_path, dedup
 from docx import Document
-from utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
+from .utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height,concat_path, dedup
 from tqdm import tqdm
-from builder import VulnTableBuilder, SubtotalTableBuilder, TargetTableBuilder, AllTargetTableBuilder, CompareTableBuilder, BriefingTextBuilder
+from .builder import VulnTableBuilder, SubtotalTableBuilder, TargetTableBuilder, AllTargetTableBuilder, CompareTableBuilder, BriefingTextBuilder
 from tqdm import tqdm
 import logging
 from rich.logging import RichHandler
@@ -270,7 +269,6 @@ class DBLoader:
             for vuln in vulns:
                 self.ml.insert_host_vuln(
                     project_name=self.project_name, host_ip=host_ip, vuln_name=vuln.name)
-
 
 if __name__ == '__main__':
     User()

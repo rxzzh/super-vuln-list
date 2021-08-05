@@ -6,13 +6,11 @@ class VulnModel(BaseModel):
     severity: str
     desc: Optional[str]
 
-
 class HostReportModel(BaseModel):
     ip: str
     os: Optional[str]
     threat_score: float
     vulns: Optional[List[VulnModel]]
-
 
 class HostFullModel(BaseModel):
     name: str

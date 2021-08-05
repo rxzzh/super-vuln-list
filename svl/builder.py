@@ -1,10 +1,10 @@
-from reader import RSASReader, TargetExcelReader
-from model import HostReportModel, VulnModel, TargetModel
-from db import MiddleLayer
+from .reader import RSASReader, TargetExcelReader
+from .model import HostReportModel, VulnModel, TargetModel
+from .db import MiddleLayer
 import os
-from utils import concat_path, dedup
+from .utils import concat_path, dedup
 from docx import Document
-from utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
+from .utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
 from tqdm import tqdm
 
 

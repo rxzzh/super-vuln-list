@@ -1,0 +1,1 @@
+uvicorn svl.server:app --reload --host=172.23.19.239

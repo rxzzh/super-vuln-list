@@ -1,4 +1,4 @@
-from orchestra import User
+from .orchestra import User
 import os
 import re
 import asyncio
@@ -80,7 +80,3 @@ class Core:
         os.system('mv project/{}/host project/{}/hosts'.format(project_name, project_name))
         return True
 core = Core()
-
-# res=core.status_list_project()
-# res=core.go_default(project_name='dev')
-# print(res)

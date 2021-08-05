@@ -1,4 +1,4 @@
-from model import HostReportModel, TargetModel
+from .model import HostReportModel, TargetModel
 from typing import List
 class Filter:
     def __init__(self):

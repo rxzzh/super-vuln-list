@@ -1,13 +1,13 @@
 from lxml import etree
 import json
-from model import (HostReportModel, VulnModel, TargetModel)
+from .model import (HostReportModel, VulnModel, TargetModel)
 from tqdm import tqdm
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from typing import List
 from rich import print as pprint
 import os
-from utils import ip_regex, concat_path
+from .utils import ip_regex, concat_path,true_ip_regex
 
 class RSASReader:
     def __init__(self):
@@ -89,7 +89,6 @@ class TargetExcelReader:
                 _[key] = record[keyword_pairs[key]]
             res.append(_)
         records = res
-        from utils import true_ip_regex
         for record in records:
             for key in list(record):
                 if not record[key]:

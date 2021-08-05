@@ -1,6 +1,6 @@
 import sqlite3
 import logging
-from utils import singleton
+from .utils import singleton
 from rich import print
 from functools import cached_property
 import os
