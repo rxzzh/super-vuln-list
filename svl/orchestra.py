@@ -54,13 +54,14 @@ class MainControl:
 
 
 class User:
-    def __init__(self):
+    def __init__(self, interactive=True):
         self.PATH = './project/'
         self.tag = ''
         if 'project' not in os.listdir():
             os.mkdir('project')
         self.mc = MainControl()
-        self.interactive()
+        if interactive:
+            self.interactive()
 
     def generate_project(self, project_name):
         project_dir_names = os.listdir(self.PATH)
