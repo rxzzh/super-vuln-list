@@ -1,9 +1,9 @@
-tqdm==4.51.0
+pytest==6.2.4
 pydantic==1.7.2
-openpyxl==3.0.7
-python_docx==0.8.10
-lxml==4.6.1
 docx==0.2.4
-rich==10.5.0
-fastapi==0.68.0
+lxml==4.6.1
+tqdm==4.51.0
+openpyxl==3.0.7
 aiofiles==0.7.0
+fastapi==0.68.0
+rich==10.6.0
