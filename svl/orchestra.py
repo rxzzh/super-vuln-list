@@ -20,15 +20,25 @@ class MainControl:
         self.ml = MiddleLayer()
 
     def db_dump(self, project_name):
+        if not self.ml.query_targets(project_name=project_name).fetchall():
+            self.dump_excel(project_name=project_name)
+        if not self.ml.query_hosts(project_name=project_name):
+            self.dump_host(project_name=project_name)
+
+    def dump_excel(self, project_name):
         xlsx_filename = os.listdir(
             'project/{}/targets_xlsx/'.format(project_name))[0]
         targets = TargetExcelReader().read(
             target_excel_path='project/{}/targets_xlsx/{}'.format(project_name, xlsx_filename))
-        hosts = RSASReader().read_all(host_file_path='project/{}/hosts/'.format(project_name))
         targets = dedup(records=targets, func=lambda x: x.ip)
         dbl = DBLoader(project_name=project_name)
         dbl.load_project()
         dbl.load_target(targets=targets)
+
+    def dump_host(self, project_name):
+        hosts = RSASReader().read_all(host_file_path='project/{}/hosts/'.format(project_name))
+        dbl = DBLoader(project_name=project_name)
+        dbl.load_project()
         dbl.load_host(hosts=hosts)
         dbl.load_vuln_from_host(hosts=hosts)
         dbl.load_host_vuln(hosts=hosts)
@@ -95,8 +105,7 @@ class User:
         return True
 
     def db_purge(self):
-        print('boop')
-        # self.mc.db_purge()
+        self.mc.db_purge()
         return True
 
     def go(self, project_name):
@@ -230,7 +239,8 @@ class DBLoader:
         self.project_name = project_name
 
     def load_project(self):
-        self.ml.insert_project(project_name=self.project_name)
+        if not self.ml.query_project_id(project_name=self.project_name):
+            self.ml.insert_project(project_name=self.project_name)
 
     def load_target(self, targets):
         for record in tqdm(targets):

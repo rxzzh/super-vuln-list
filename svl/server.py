@@ -7,7 +7,7 @@ import aiofiles
 app = FastAPI()
 origins = [
   'http://localhost:8080',
-  'http://172.26.245.180:8080'
+  'http://172.25.64.192:8080'
 ]
 
 app.add_middleware(middleware_class=CORSMiddleware,allow_origins=origins, allow_methods=["*"])
@@ -104,6 +104,10 @@ async def get_project_dump(name):
 @app.get('/api/project/{name}/dump/status')
 def get_project_dump_status(name):
   return core.status_dump(project_name=name)
+
+@app.get('/api/project/{name}/dump/ready')
+def get_project_dump_ready(name):
+  return core.status_ready_project(project_name=name)
 
 @app.get('/files/{name}/{file_name}')
 def get_file(name, file_name):

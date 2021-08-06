@@ -34,7 +34,7 @@ class Core:
         pass
     
     def status_ready_project(self, project_name):
-        pass
+        return self.uc.environment_check(project_name=project_name)
 
     def status_list_project(self):
         return self.uc.list_projects()
@@ -67,7 +67,7 @@ class Core:
             print('regex fail')
             return False
         os.system('mv tmp/{}.xlsx project/{}/targets_xlsx/properties.xlsx'.format(project_name, project_name))
-        self.uc
+        self.uc.mc.dump_excel(project_name=project_name)
         return True
 
     def handle_upload_zip(self, project_name):

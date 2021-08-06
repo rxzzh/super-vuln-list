@@ -185,7 +185,11 @@ class MiddleLayer:
 
     def query_project_id(self, project_name):
         sql = 'select id from project where name = ?;'
-        return self.db.execute(sql, (project_name,)).fetchone()[0]
+        res = self.db.execute(sql, (project_name,)).fetchone()
+        if res:
+            return res[0]
+        else:
+            return None
 
     def query_vuln_id(self, vuln_name):
         sql = 'select id from vuln where name=?;'
