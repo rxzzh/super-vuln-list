@@ -1,5 +1,5 @@
 from rich import print as pprint
-from .reader import RSASReader, TargetExcelReader
+from .reader import RSASReader, TargetExcelReader, TRXReader
 from .model import HostReportModel, VulnModel, TargetModel
 from .db import MiddleLayer, SchemaManager
 import os
@@ -15,13 +15,27 @@ logging.basicConfig(level='INFO', format=FORMAT, handlers=[RichHandler()])
 
 
 class MainControl:
+    class READERS:
+        RSAS = "RSAS"
+        TRX = "TRX"
+    
     def __init__(self):
         self.sm = SchemaManager()
         self.ml = MiddleLayer()
+        self.reader = RSASReader()
+    
+    def config_reader(self, reader_type: str):
+        if reader_type == self.READERS.RSAS:
+            self.reader = RSASReader()
+        elif reader_type == self.READERS.TRX:
+            self.reader = TRXReader()
+        else:
+            raise Exception
 
     def db_dump(self, project_name):
         if not self.ml.query_targets(project_name=project_name).fetchall():
-            self.dump_excel(project_name=project_name)
+            # self.dump_excel(project_name=project_name)
+            pass
         if not self.ml.query_hosts(project_name=project_name):
             self.dump_host(project_name=project_name)
 
@@ -36,7 +50,7 @@ class MainControl:
         dbl.load_target(targets=targets)
 
     def dump_host(self, project_name):
-        hosts = RSASReader().read_all(host_file_path='project/{}/hosts/'.format(project_name))
+        hosts = self.reader.read_all(host_file_path='project/{}/hosts/'.format(project_name))
         dbl = DBLoader(project_name=project_name)
         dbl.load_project()
         dbl.load_host(hosts=hosts)
@@ -52,9 +66,9 @@ class MainControl:
     def analysis_basic(self, project_name):
         VulnTableBuilder().build(project_name=project_name)
         SubtotalTableBuilder().build(project_name=project_name)
-        TargetTableBuilder().build(project_name=project_name)
-        AllTargetTableBuilder().build(project_name=project_name)
-        BriefingTextBuilder().build(project_name=project_name)
+        # TargetTableBuilder().build(project_name=project_name)
+        # AllTargetTableBuilder().build(project_name=project_name)
+        # BriefingTextBuilder().build(project_name=project_name)
 
 
     def analysis_compare(self, project_name_a, project_name_b):
@@ -156,7 +170,7 @@ class User:
             if not cmd:
                 continue
             cmds = ['help', 'ls', 'new', 'go',
-                    'exit', 'banner', 'tag', 'compare', 'lsdb', 'dump', 'purge']
+                    'exit', 'banner', 'tag', 'compare', 'lsdb', 'dump', 'purge', 'cfg_reader']
             if cmd not in cmds:
                 pprint('[green]'+' '.join(cmds))
                 continue
@@ -199,6 +213,10 @@ class User:
                 name = input('enter project name:')
                 if self.db_dump(project_name=name):
                     pprint('[green bold]TASK SUCCESS!')
+            if cmd == 'cfg_reader':
+                pprint(['TRX','RSAS'])
+                reader_str = input(':>')
+                self.mc.config_reader(reader_type=reader_str)
             if cmd == 'go':
                 name = input('enter project name:')
                 if not name:

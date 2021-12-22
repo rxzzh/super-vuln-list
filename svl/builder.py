@@ -91,13 +91,13 @@ class VulnTableBuilder(TableBuilder):
             # print(record)
             names[record[0]][2].append(record[2])
         records = [(_[0],_[1],','.join(_[2])) for _ in names.values()]
-        hanzi_mapper = {'high':'高','middle':'中','low':'低'}
+        hanzi_mapper = {'high':'高危','middle':'中危','low':'低危'}
         severity_mapper = {'high':0,'middle':1,'low':2}
         records.sort(key=lambda x: severity_mapper[x[1]])
-        records = [(_[0],hanzi_mapper[_[1]],_[2]) for _ in records]
-        high_sum = len(list(filter(lambda x: x[1]=='高', records)))
-        mid_sum = len(list(filter(lambda x: x[1]=='中', records)))
-        low_sum = len(list(filter(lambda x: x[1]=='低', records)))
+        records = [(_[0],_[2],hanzi_mapper[_[1]]) for _ in records]
+        high_sum = len(list(filter(lambda x: x[1]=='高危', records)))
+        mid_sum = len(list(filter(lambda x: x[1]=='中危', records)))
+        low_sum = len(list(filter(lambda x: x[1]=='低危', records)))
         records.append(('高：{}\t中：{}\t低：{}'.format(high_sum, mid_sum, low_sum),'',''))
         self.dh.build_doc_tablelike(records=self.prefix_id(records), template_path='static/template-vulnlist.docx', filename='漏洞类型.docx', project_name=project_name)
 
