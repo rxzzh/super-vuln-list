@@ -16,6 +16,7 @@ class RSASReader:
     def read_all(self, host_file_path):
         files = os.listdir(host_file_path)
         files = list(filter(ip_regex.match, files))
+        # print(files)
         res = []
         for _ in files:
             res.append(self.read(host_file_path=concat_path(host_file_path, _)))
@@ -47,7 +48,47 @@ class RSASReader:
         vulns = [VulnModel(name=_[0], severity=_[1])
                  for _ in list(zip(vuln_names, vuln_threat))]
         host.vulns = vulns
+        # print(host)
         return host
+
+class TRXReader:
+    def __init__(self) -> None:
+        pass
+
+    def read_all(self, host_file_path):
+        files = os.listdir(host_file_path)
+        # print(files)
+        res = []
+        for _ in files:
+            res.append(self.read(host_file_path=concat_path(host_file_path, _)))
+        return res
+
+    def read(self, host_file_path) -> HostReportModel:
+        root = etree.HTML(open(host_file_path).read())
+
+        ip = root.xpath('/html/body/div/div[2]/div[2]/div[2]/table/tr/td[1]/table/tbody/tr[1]/td/text()')[0]
+        vulns = []
+
+        elements = root.xpath("/html/body/div/div[6]/div/table/tbody/tr[contains(@class, 'vuln_middle')]")
+        for _ in elements:
+            vuln_name = _.xpath("td/span/text()")[0]
+            vuln_class = _.xpath("td/span/@class")[0]
+            class_severity_mapper = {
+                'color-severity-1':'low',
+                'color-severity-2':'middle',
+                'color-severity-3':'high'
+            }
+            vuln_severity = class_severity_mapper[vuln_class]
+            vulns.append(VulnModel(name=vuln_name, severity=vuln_severity))
+
+        from rich import print as pprint
+        new_host = HostReportModel(
+            ip=ip,
+            os='',
+            threat_score=0.0,
+            vulns = vulns
+        )
+        return new_host
 
 
 class TargetExcelReader:

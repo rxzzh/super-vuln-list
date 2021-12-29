@@ -1,1 +1,1 @@
-uvicorn svl.server:app --reload --host=172.25.64.192
+uvicorn svl.server:app --reload --host=RUNA
