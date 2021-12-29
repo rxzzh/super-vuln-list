@@ -4,3 +4,4 @@ project/**
 venv/
 dev.py
 *.sqlite
+.Dockerfile.swp
