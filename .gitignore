@@ -5,3 +5,4 @@ venv/
 dev.py
 *.sqlite
 .Dockerfile.swp
+tmp/**
