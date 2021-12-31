@@ -24,7 +24,7 @@ class RSASReader:
 
     def read(self, host_file_path) -> HostReportModel:
         
-        with open(host_file_path) as f:
+        with open(host_file_path, encoding="utf-8") as f:
             html_text = f.read()
         root = etree.HTML(html_text)
         
@@ -64,7 +64,7 @@ class TRXReader:
         return res
 
     def read(self, host_file_path) -> HostReportModel:
-        root = etree.HTML(open(host_file_path).read())
+        root = etree.HTML(open(host_file_path, encoding="utf-8").read())
 
         ip = root.xpath('/html/body/div/div[2]/div[2]/div[2]/table/tr/td[1]/table/tbody/tr[1]/td/text()')[0]
         vulns = []
