@@ -57,7 +57,7 @@ class TableBuilder(Builder):
 class SubtotalTableBuilder(TableBuilder):
     def build(self, project_name):
         records = self.query(project_name=project_name)
-        records = [(_[0], _[1], _[2], _[3], _[4]) for _ in records]
+        records = [(_[0], _[3], _[2], _[1], _[4]) for _ in records]
         # def select()
         records.append(('漏洞数量合计',sum([_[1] for _ in records]),sum([_[2] for _ in records]),sum([_[3] for _ in records]),sum([_[4] for _ in records])))
         self.dh.build_doc_tablelike(records=self.prefix_id(records), template_path='static/template-subtotal.docx', filename='数量统计.docx', project_name=project_name)
